@@ -138,4 +138,8 @@ app.get('{*path}', (_req, res) => {
 
 app.listen(PORT, () => {
   console.log(`Bicycle backend running on port ${PORT}`)
+  console.log(`[ENV] SUPABASE_URL: ${process.env.SUPABASE_URL ? 'set' : 'MISSING'}`)
+  console.log(`[ENV] SUPABASE_SERVICE_ROLE_KEY: ${process.env.SUPABASE_SERVICE_ROLE_KEY ? 'set' : 'MISSING'}`)
+  console.log(`[ENV] BASE_URL: ${BASE_URL}`)
+  console.log(`[ENV] NAVER_CLIENT_ID: ${NAVER_CLIENT_ID ? 'set' : 'MISSING'}`)
 })
