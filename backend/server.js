@@ -49,6 +49,7 @@ app.get('/api/auth/naver', (_req, res) => {
 app.get('/api/auth/naver/callback', async (req, res) => {
   try {
     const { code, state } = req.query
+    console.log('[Naver] callback received, code:', !!code)
     if (!code) {
       return res.redirect(`${BASE_URL}?error=no_code`)
     }
@@ -60,6 +61,7 @@ app.get('/api/auth/naver/callback', async (req, res) => {
       `https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id=${NAVER_CLIENT_ID}&client_secret=${NAVER_CLIENT_SECRET}&code=${code}&state=${state}`
     )
     const tokenData = await tokenResponse.json()
+    console.log('[Naver] token exchange:', tokenData.access_token ? 'success' : 'failed', tokenData.error || '')
 
     if (!tokenData.access_token) {
       return res.redirect(`${BASE_URL}?error=token_failed`)
@@ -70,6 +72,7 @@ app.get('/api/auth/naver/callback', async (req, res) => {
       headers: { Authorization: `Bearer ${tokenData.access_token}` },
     })
     const profileData = await profileResponse.json()
+    console.log('[Naver] profile:', profileData.resultcode, profileData.response?.email)
 
     if (profileData.resultcode !== '00') {
       return res.redirect(`${BASE_URL}?error=profile_failed`)
@@ -77,12 +80,17 @@ app.get('/api/auth/naver/callback', async (req, res) => {
 
     const { email, name } = profileData.response
     const naverEmail = email || `naver_${profileData.response.id}@naver.placeholder`
+    console.log('[Naver] email:', naverEmail, 'name:', name)
 
     // Check if user exists
     const admin = getSupabaseAdmin()
-    if (!admin) return res.redirect(`${BASE_URL}?error=supabase_not_configured`)
+    if (!admin) {
+      console.log('[Naver] supabase admin not configured')
+      return res.redirect(`${BASE_URL}?error=supabase_not_configured`)
+    }
     const { data: existingUsers } = await admin.auth.admin.listUsers()
     const existingUser = existingUsers?.users?.find((u) => u.email === naverEmail)
+    console.log('[Naver] existing user:', !!existingUser)
 
     let userId
     if (existingUser) {
@@ -94,10 +102,12 @@ app.get('/api/auth/naver/callback', async (req, res) => {
         user_metadata: { full_name: name, provider: 'naver' },
       })
       if (createError) {
+        console.log('[Naver] create user error:', createError)
         return res.redirect(`${BASE_URL}?error=create_user_failed`)
       }
       userId = newUser.user.id
     }
+    console.log('[Naver] userId:', userId)
 
     // Generate magic link
     const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
@@ -106,13 +116,15 @@ app.get('/api/auth/naver/callback', async (req, res) => {
     })
 
     if (linkError || !linkData) {
+      console.log('[Naver] magic link error:', linkError)
       return res.redirect(`${BASE_URL}?error=magic_link_failed`)
     }
 
     const tokenHash = linkData.properties?.hashed_token
+    console.log('[Naver] success! redirecting with token_hash')
     res.redirect(`${BASE_URL}?token_hash=${tokenHash}&type=magiclink`)
   } catch (error) {
-    console.error('Naver auth error:', error)
+    console.error('[Naver] auth error:', error)
     res.redirect(`${BASE_URL}?error=server_error`)
   }
 })
