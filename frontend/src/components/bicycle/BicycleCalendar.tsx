@@ -1,7 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { BicycleRecord } from '@/types'
 import { MEMBERS } from '@/types'
-import { isHoliday, getHolidayName } from '@/utils/holidays'
+import { isHoliday, isBirthday, getHolidayName, getBirthdayName, getNolgeumName } from '@/utils/holidays'
 
 interface Props {
   records: BicycleRecord[]
@@ -119,14 +119,17 @@ export function BicycleCalendar({ records, loading, currentMonth, onToggle, onPr
             const isToday = dateStr === todayStr
             const isFuture = new Date(dateStr) > today
             const holiday = getHolidayName(dateStr)
+            const birthday = getBirthdayName(dateStr)
+            const nolgeum = getNolgeumName(dateStr)
             const isRed = dayOfWeek === 0 || isHoliday(dateStr)
+            const hasBirthday = isBirthday(dateStr)
 
             return (
               <div
                 key={day}
                 className={`border-t border-border p-1 min-h-[80px] sm:min-h-[100px] transition-colors ${
                   isToday ? 'bg-primary/5' : ''
-                } ${isFuture ? 'opacity-50' : ''} ${holiday ? 'bg-red-50 dark:bg-red-900/10' : ''}`}
+                } ${isFuture ? 'opacity-50' : ''} ${holiday ? 'bg-red-50 dark:bg-red-900/10' : ''} ${hasBirthday ? 'bg-amber-50 dark:bg-amber-900/10' : ''}`}
               >
                 <div className="mb-1">
                   <span
@@ -144,6 +147,12 @@ export function BicycleCalendar({ records, loading, currentMonth, onToggle, onPr
                   </span>
                   {holiday && (
                     <span className="block text-[7px] sm:text-[9px] text-red-400 leading-tight truncate">{holiday}</span>
+                  )}
+                  {birthday && (
+                    <span className="block text-[7px] sm:text-[9px] text-amber-500 leading-tight truncate">{birthday}</span>
+                  )}
+                  {nolgeum && !holiday && (
+                    <span className="block text-[7px] sm:text-[9px] text-green-500 leading-tight truncate">{nolgeum}</span>
                   )}
                 </div>
                 <div className="flex flex-col gap-0.5">

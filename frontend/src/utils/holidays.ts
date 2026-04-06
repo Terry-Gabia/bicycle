@@ -40,6 +40,40 @@ const LUNAR_HOLIDAYS: Record<string, string> = {
   '2027-10-16': '추석 연휴',
 }
 
+// 가족 생일 (고정 양력)
+const FIXED_BIRTHDAYS: Record<string, string> = {
+  '09-01': '🎂엄마 생일',
+  '12-12': '🎂솔이 생일',
+  '10-16': '🎂연준 생일',
+}
+
+// 아빠 생일 (음력 9/1 → 연도별 양력 변환)
+const PAPA_BIRTHDAY: Record<string, string> = {
+  '2025-10-23': '🎂아빠 생일',
+  '2026-10-11': '🎂아빠 생일',
+  '2027-10-31': '🎂아빠 생일',
+}
+
+// 매월 2째주, 4째주 금요일 = 놀금 (가비아)
+function isNolgeum(dateStr: string): boolean {
+  const date = new Date(dateStr)
+  if (date.getDay() !== 5) return false // 금요일만
+  const day = date.getDate()
+  const weekNum = Math.ceil(day / 7)
+  return weekNum === 2 || weekNum === 4
+}
+
+export function getBirthdayName(dateStr: string): string | null {
+  if (PAPA_BIRTHDAY[dateStr]) return PAPA_BIRTHDAY[dateStr]
+  const monthDay = dateStr.slice(5)
+  if (FIXED_BIRTHDAYS[monthDay]) return FIXED_BIRTHDAYS[monthDay]
+  return null
+}
+
+export function getNolgeumName(dateStr: string): string | null {
+  return isNolgeum(dateStr) ? '🎉아빠놀금' : null
+}
+
 export function getHolidayName(dateStr: string): string | null {
   // 음력 기반 공휴일 체크
   if (LUNAR_HOLIDAYS[dateStr]) return LUNAR_HOLIDAYS[dateStr]
@@ -51,6 +85,14 @@ export function getHolidayName(dateStr: string): string | null {
   return null
 }
 
+export function getDateLabel(dateStr: string): string | null {
+  return getHolidayName(dateStr) || getBirthdayName(dateStr) || getNolgeumName(dateStr)
+}
+
 export function isHoliday(dateStr: string): boolean {
   return getHolidayName(dateStr) !== null
+}
+
+export function isBirthday(dateStr: string): boolean {
+  return getBirthdayName(dateStr) !== null
 }
