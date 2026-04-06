@@ -1,0 +1,123 @@
+import express from 'express'
+import cors from 'cors'
+import { createClient } from '@supabase/supabase-js'
+import dotenv from 'dotenv'
+import path from 'path'
+import { fileURLToPath } from 'url'
+
+const __filename = fileURLToPath(import.meta.url)
+const __dirname = path.dirname(__filename)
+
+dotenv.config({ path: path.join(__dirname, '..', '.env') })
+
+const app = express()
+app.use(express.json())
+app.use(cors())
+
+const SUPABASE_URL = process.env.SUPABASE_URL
+const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
+const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID
+const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET
+const BASE_URL = process.env.BASE_URL || 'http://localhost:5173'
+const PORT = process.env.PORT || 3001
+
+const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
+  auth: { autoRefreshToken: false, persistSession: false },
+})
+
+// Health check
+app.get('/api/health', (_req, res) => {
+  res.json({ status: 'ok' })
+})
+
+// Naver OAuth - Step 1: Redirect to Naver
+app.get('/api/auth/naver', (_req, res) => {
+  if (!NAVER_CLIENT_ID) {
+    return res.status(500).json({ error: 'Naver OAuth not configured' })
+  }
+  const state = Math.random().toString(36).substring(2)
+  const callbackUrl = `${BASE_URL}/api/auth/naver/callback`
+  const naverAuthUrl = `https://nid.naver.com/oauth2.0/authorize?response_type=code&client_id=${NAVER_CLIENT_ID}&redirect_uri=${encodeURIComponent(callbackUrl)}&state=${state}`
+  res.redirect(naverAuthUrl)
+})
+
+// Naver OAuth - Step 2: Callback
+app.get('/api/auth/naver/callback', async (req, res) => {
+  try {
+    const { code, state } = req.query
+    if (!code) {
+      return res.redirect(`${BASE_URL}?error=no_code`)
+    }
+
+    const callbackUrl = `${BASE_URL}/api/auth/naver/callback`
+
+    // Exchange code for token
+    const tokenResponse = await fetch(
+      `https://nid.naver.com/oauth2.0/token?grant_type=authorization_code&client_id=${NAVER_CLIENT_ID}&client_secret=${NAVER_CLIENT_SECRET}&code=${code}&state=${state}`
+    )
+    const tokenData = await tokenResponse.json()
+
+    if (!tokenData.access_token) {
+      return res.redirect(`${BASE_URL}?error=token_failed`)
+    }
+
+    // Get user info
+    const profileResponse = await fetch('https://openapi.naver.com/v1/nid/me', {
+      headers: { Authorization: `Bearer ${tokenData.access_token}` },
+    })
+    const profileData = await profileResponse.json()
+
+    if (profileData.resultcode !== '00') {
+      return res.redirect(`${BASE_URL}?error=profile_failed`)
+    }
+
+    const { email, name } = profileData.response
+    const naverEmail = email || `naver_${profileData.response.id}@naver.placeholder`
+
+    // Check if user exists
+    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const existingUser = existingUsers?.users?.find((u) => u.email === naverEmail)
+
+    let userId
+    if (existingUser) {
+      userId = existingUser.id
+    } else {
+      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+        email: naverEmail,
+        email_confirm: true,
+        user_metadata: { full_name: name, provider: 'naver' },
+      })
+      if (createError) {
+        return res.redirect(`${BASE_URL}?error=create_user_failed`)
+      }
+      userId = newUser.user.id
+    }
+
+    // Generate magic link
+    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+      type: 'magiclink',
+      email: naverEmail,
+    })
+
+    if (linkError || !linkData) {
+      return res.redirect(`${BASE_URL}?error=magic_link_failed`)
+    }
+
+    const tokenHash = linkData.properties?.hashed_token
+    res.redirect(`${BASE_URL}?token_hash=${tokenHash}&type=magiclink`)
+  } catch (error) {
+    console.error('Naver auth error:', error)
+    res.redirect(`${BASE_URL}?error=server_error`)
+  }
+})
+
+// Serve static files in production
+const distPath = path.join(__dirname, '..', 'frontend', 'dist')
+app.use(express.static(distPath))
+app.get('*', (_req, res) => {
+  res.sendFile(path.join(distPath, 'index.html'))
+})
+
+app.listen(PORT, () => {
+  console.log(`Bicycle backend running on port ${PORT}`)
+})
