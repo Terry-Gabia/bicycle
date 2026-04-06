@@ -163,7 +163,7 @@ export function BicycleCalendar({ records, loading, currentMonth, onToggle, onPr
                             </svg>
                           )}
                         </span>
-                        <span className="hidden sm:inline">{m.label}</span>
+                        <span className="text-[8px] sm:text-xs leading-none">{m.label}</span>
                       </button>
                     )
                   })}
