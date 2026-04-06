@@ -1,6 +1,7 @@
 import { ChevronLeft, ChevronRight } from 'lucide-react'
 import type { BicycleRecord } from '@/types'
 import { MEMBERS } from '@/types'
+import { isHoliday, getHolidayName } from '@/utils/holidays'
 
 interface Props {
   records: BicycleRecord[]
@@ -117,26 +118,33 @@ export function BicycleCalendar({ records, loading, currentMonth, onToggle, onPr
             const dayOfWeek = (firstDay + i) % 7
             const isToday = dateStr === todayStr
             const isFuture = new Date(dateStr) > today
+            const holiday = getHolidayName(dateStr)
+            const isRed = dayOfWeek === 0 || isHoliday(dateStr)
 
             return (
               <div
                 key={day}
                 className={`border-t border-border p-1 min-h-[80px] sm:min-h-[100px] transition-colors ${
                   isToday ? 'bg-primary/5' : ''
-                } ${isFuture ? 'opacity-50' : ''}`}
+                } ${isFuture ? 'opacity-50' : ''} ${holiday ? 'bg-red-50 dark:bg-red-900/10' : ''}`}
               >
-                <div
-                  className={`mb-1 text-xs font-medium ${
-                    isToday
-                      ? 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground'
-                      : dayOfWeek === 0
-                        ? 'text-red-500'
-                        : dayOfWeek === 6
-                          ? 'text-blue-500'
-                          : 'text-foreground'
-                  }`}
-                >
-                  {day}
+                <div className="mb-1">
+                  <span
+                    className={`text-xs font-medium ${
+                      isToday
+                        ? 'inline-flex h-5 w-5 items-center justify-center rounded-full bg-primary text-primary-foreground'
+                        : isRed
+                          ? 'text-red-500'
+                          : dayOfWeek === 6
+                            ? 'text-blue-500'
+                            : 'text-foreground'
+                    }`}
+                  >
+                    {day}
+                  </span>
+                  {holiday && (
+                    <span className="block text-[7px] sm:text-[9px] text-red-400 leading-tight truncate">{holiday}</span>
+                  )}
                 </div>
                 <div className="flex flex-col gap-0.5">
                   {MEMBERS.map((m) => {
