@@ -14,16 +14,20 @@ const app = express()
 app.use(express.json())
 app.use(cors())
 
-const SUPABASE_URL = process.env.SUPABASE_URL
-const SUPABASE_SERVICE_ROLE_KEY = process.env.SUPABASE_SERVICE_ROLE_KEY
 const NAVER_CLIENT_ID = process.env.NAVER_CLIENT_ID
 const NAVER_CLIENT_SECRET = process.env.NAVER_CLIENT_SECRET
 const BASE_URL = process.env.BASE_URL || 'http://localhost:5173'
 const PORT = process.env.PORT || 3001
 
-const supabaseAdmin = createClient(SUPABASE_URL, SUPABASE_SERVICE_ROLE_KEY, {
-  auth: { autoRefreshToken: false, persistSession: false },
-})
+let supabaseAdmin = null
+function getSupabaseAdmin() {
+  if (!supabaseAdmin && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+      auth: { autoRefreshToken: false, persistSession: false },
+    })
+  }
+  return supabaseAdmin
+}
 
 // Health check
 app.get('/api/health', (_req, res) => {
@@ -75,14 +79,16 @@ app.get('/api/auth/naver/callback', async (req, res) => {
     const naverEmail = email || `naver_${profileData.response.id}@naver.placeholder`
 
     // Check if user exists
-    const { data: existingUsers } = await supabaseAdmin.auth.admin.listUsers()
+    const admin = getSupabaseAdmin()
+    if (!admin) return res.redirect(`${BASE_URL}?error=supabase_not_configured`)
+    const { data: existingUsers } = await admin.auth.admin.listUsers()
     const existingUser = existingUsers?.users?.find((u) => u.email === naverEmail)
 
     let userId
     if (existingUser) {
       userId = existingUser.id
     } else {
-      const { data: newUser, error: createError } = await supabaseAdmin.auth.admin.createUser({
+      const { data: newUser, error: createError } = await admin.auth.admin.createUser({
         email: naverEmail,
         email_confirm: true,
         user_metadata: { full_name: name, provider: 'naver' },
@@ -94,7 +100,7 @@ app.get('/api/auth/naver/callback', async (req, res) => {
     }
 
     // Generate magic link
-    const { data: linkData, error: linkError } = await supabaseAdmin.auth.admin.generateLink({
+    const { data: linkData, error: linkError } = await admin.auth.admin.generateLink({
       type: 'magiclink',
       email: naverEmail,
     })
