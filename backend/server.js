@@ -21,8 +21,9 @@ const PORT = process.env.PORT || 3001
 
 let supabaseAdmin = null
 function getSupabaseAdmin() {
-  if (!supabaseAdmin && process.env.SUPABASE_URL && process.env.SUPABASE_SERVICE_ROLE_KEY) {
-    supabaseAdmin = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY, {
+  const url = process.env.SUPABASE_URL || process.env.VITE_SUPABASE_URL
+  if (!supabaseAdmin && url && process.env.SUPABASE_SERVICE_ROLE_KEY) {
+    supabaseAdmin = createClient(url, process.env.SUPABASE_SERVICE_ROLE_KEY, {
       auth: { autoRefreshToken: false, persistSession: false },
     })
   }
