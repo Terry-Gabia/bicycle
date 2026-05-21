@@ -83,8 +83,8 @@ bicycle/
 ### Google OAuth
 - Supabase Auth → Providers → Google에서 설정
 - Google Cloud Console OAuth 클라이언트: `SOUL BICYCLE`
-- Authorized redirect URI: `https://dvynnouphxkreipjrnws.supabase.co/auth/v1/callback`
-- Authorized JavaScript origin: `https://dvynnouphxkreipjrnws.supabase.co`
+- Authorized redirect URI: `https://<YOUR_SUPABASE_PROJECT>.supabase.co/auth/v1/callback`
+- Authorized JavaScript origin: `https://<YOUR_SUPABASE_PROJECT>.supabase.co`
 
 ### Naver OAuth
 - 네이버 개발자센터 앱: `솔이의자전거기록`
@@ -101,9 +101,9 @@ bicycle/
 
 ### .env (로컬 개발용)
 ```
-VITE_SUPABASE_URL=https://dvynnouphxkreipjrnws.supabase.co
+VITE_SUPABASE_URL=https://<YOUR_SUPABASE_PROJECT>.supabase.co
 VITE_SUPABASE_ANON_KEY=...
-SUPABASE_URL=https://dvynnouphxkreipjrnws.supabase.co
+SUPABASE_URL=https://<YOUR_SUPABASE_PROJECT>.supabase.co
 SUPABASE_SERVICE_ROLE_KEY=...
 PORT=3001
 NAVER_CLIENT_ID=...
